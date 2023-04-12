@@ -1,0 +1,128 @@
+version: '3.0'
+
+services:
+  profile_listener:
+    container_name: profile_listener
+    build:
+      context: .
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - 3000:3000
+    command: npm run listen
+    depends_on:
+      - postgres
+      - rabbitmq
+    restart: always
+    links:
+      - rabbitmq
+    networks:
+      - postgres
+
+  users_listener:
+    container_name: users_listener
+    build:
+      context: .
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - 4000:4000
+    command: npm run listen2
+    depends_on:
+      - postgres
+      - rabbitmq
+    restart: always
+    links:
+      - rabbitmq
+    networks:
+      - postgres
+
+  main_profile:
+    container_name: main_profile
+    build:
+      context: .
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      -  /app/node_modules
+    ports:
+      - 5000:5000
+      - 9229:9229
+    command: npm start
+    depends_on:
+      - postgres
+    restart: always
+    networks:
+      - postgres
+
+  main_users_auth:
+    container_name: main_users_auth
+    build:
+      context: .
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - 8000:8000
+      - 9230:9230
+    command: npm start users_auth
+    depends_on:
+      - postgres
+    restart: always
+    networks:
+      - postgres
+
+  postgres:
+    container_name: postgres
+    image: postgres:12
+    env_file:
+      - .env
+    environment:
+      PG_DATA: /var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - postgres
+
+
+  rabbitmq:
+    image: rabbitmq:3.10.7-management
+    hostname: rabbitmq
+    tty: true
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - ./rabbitmq/lib:/var/lib/rabbitmq
+    networks:
+      - postgres
+
+  adminer:
+    image: dockette/adminer:full-php5
+    restart: always
+    ports:
+      - 8080:8080
+
+
+volumes:
+  pgdata:
+
+networks:
+  postgres:
+    driver: bridge
